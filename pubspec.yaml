@@ -1,0 +1,29 @@
+name: network_stabilizer
+description: Elite Gold Network Optimization System for MTN, Airtel, and Glo.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  url_launcher: ^6.3.1
+  # For processing the secure background tunnel connections
+  flutter_tun_v2: ^1.0.0
+  # For playing the silent 10Hz Linux audio pulse to force hardware wake-lock
+  audioplayers: ^6.1.0
+  # For keeping the foreground notification active so Android doesn't kill the app
+  flutter_foreground_task: ^8.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  # Registered assets folder for your silent audio wake-lock pulse
+  assets:
+    - assets/audio/pulse10hz.mp3
