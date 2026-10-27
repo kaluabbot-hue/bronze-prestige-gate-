@@ -1,4 +1,4 @@
-name: Build APK
+name: Build App
 
 on:
   workflow_dispatch:
@@ -11,12 +11,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -25,11 +19,11 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Release APK
-        run: flutter build apk --release --android-skip-build-dependency-validation
+      - name: Compile Application Layout
+        run: flutter build web --release
 
-      - name: Upload APK Artifact
+      - name: Package Download Link
         uses: actions/upload-artifact@v4
         with:
-          name: network-stabilizer-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: network-stabilizer-package
+          path: build/web/
