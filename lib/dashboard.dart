@@ -10,10 +10,10 @@ class PremiumDashboardScreen extends StatefulWidget {
   final String paymentReference;
   final String serverIp;
   
-  PremiumDashboardScreen({required this.paymentReference, required this.serverIp});
+  const PremiumDashboardScreen({super.key, required this.paymentReference, required this.serverIp});
 
   @override
-  _PremiumDashboardScreenState createState() => _PremiumDashboardScreenState();
+  State<PremiumDashboardScreen> createState() => _PremiumDashboardScreenState();
 }
 
 class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
@@ -24,10 +24,10 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _heartbeatTimer;
 
-  final Color obsidianBlack = Color(0xFF030305);
-  final Color gold24k = Color(0xFFFFD700);
-  final Color matteGold = Color(0xFFD4AF37);
-  final Color steelGray = Color(0xFF1C1C24);
+  final Color obsidianBlack = const Color(0xFF030305);
+  final Color gold24k = const Color(0xFFFFD700);
+  final Color matteGold = const Color(0xFFD4AF37);
+  final Color steelGray = const Color(0xFF1C1C24);
 
   @override
   void initState() {
@@ -36,20 +36,36 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
   }
 
   void initForegroundTask() {
-    // Corrected configuration approach matching flutter_foreground_task v8.x specifications
-    FlutterForegroundTask.initCommunicationPort();
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'gold_stabilizer_channel',
+        channelName: 'Elite Gold Stabilizer',
+        channelDescription: 'Optimizing connection',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: true,
+        playSound: false,
+      ),
+      foregroundTaskOptions: const ForegroundTaskOptions(
+        interval: 5000,
+        isOnceEvent: false,
+        autoRunOnBoot: true,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
   }
 
-  // Master activation function controlling background core states
   Future<void> toggleOptimizationEngine(bool targetState) async {
-    // Authenticate with your live Oracle Cloud VPS backend first before triggering hardware flags
     try {
       final verifyResponse = await http.get(
         Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')
-      ).timeout(Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 10));
       
       final authData = json.decode(verifyResponse.body);
-      if (!authData['authorized']) {
+      if (authData['authorized'] != true) {
         if (!mounted) return;
         showAuthError("License Expired or Revoked.");
         return;
@@ -71,41 +87,46 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
         latencyMetrics = "14ms";
       });
 
-      // 1. Force Local System-Wide MTU Clamping (1360 Bytes) & Hijack DNS Layer
       try {
         await FlutterTunV2.init(
           tunName: "GoldTunnel",
           mtu: 1360,
           ip: "10.0.0.2",
-          dns: ["1.1.1.1", "8.8.8.8"], // Hardcodes fast Anycast public routes
+          dns: ["1.1.1.1", "8.8.8.8"],
         );
         await FlutterTunV2.start();
       } catch (e) {
-        // Safe fall-through if virtual NIC is already initialization primed
+        // ignore if already started
       }
 
-      // 2. Play Sub-Audible 10Hz Linux Audio Pulse to maintain hardware wake-lock
       try {
         await _audioPlayer.setReleaseMode(ReleaseMode.loop);
         await _audioPlayer.setVolume(0.01); 
         await _audioPlayer.play(AssetSource('audio/pulse10hz.mp3'));
       } catch (e) {
-        // Prevents layout halts if asset stream is initializing
+        // ignore audio errors
       }
 
-      // 3. Fire Persistent Foreground Service Notification to bypass Android OS RAM cleanups
-      await FlutterForegroundTask.startService(
-        notificationTitle: 'Elite Gold Stabilizer Active',
-        notificationText: 'Optimizing MTN/Airtel/Glo connection masts...',
-        callback: null, // Set background processing execution block if required later
-      );
+      try {
+        await FlutterForegroundTask.startService(
+          notificationTitle: 'Elite Gold Stabilizer Active',
+          notificationText: 'Optimizing MTN/Airtel/Glo connection masts...',
+          callback: startCallback,
+        );
+      } catch (e) {
+        try {
+          await FlutterForegroundTask.startService(
+            notificationTitle: 'Elite Gold Stabilizer Active',
+            notificationText: 'Optimizing connection...',
+          );
+        } catch (_) {}
+      }
 
-      // 4. Start Strict 3-Second UDP Keep-Alive Heartbeat Pulses to your Cloud VPS
-      _heartbeatTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
+      _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
         try {
           await http.get(Uri.parse('http://${widget.serverIp}:3000/'));
         } catch (e) {
-          // Silent catch to handle cell tower handovers gracefully
+          // silent
         }
       });
 
@@ -115,7 +136,6 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
         latencyMetrics = "--";
       });
 
-      // Teardown and de-allocate hardware processes completely on toggle OFF
       try { await FlutterTunV2.stop(); } catch (e) {}
       try { await _audioPlayer.stop(); } catch (e) {}
       await FlutterForegroundTask.stopService();
@@ -144,10 +164,10 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
         backgroundColor: obsidianBlack,
         appBar: AppBar(
           backgroundColor: steelGray,
-          title: Text(
+          title: const Text(
             "ELITE GOLD CONSOLE",
             style: TextStyle(
-              color: gold24k,
+              color: Color(0xFFFFD700),
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
               fontSize: 16,
@@ -163,23 +183,23 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: steelGray,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: gold24k.withOpacity(0.5), width: 1),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.between,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           "TIER: ALL-INCLUSIVE PREMIUM",
                           style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                         ),
-                        SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         Text(
                           connectionStatus,
                           style: TextStyle(
@@ -205,17 +225,17 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
                 ),
               ),
               
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               
               Text(
                 "INTELLIGENT TELEMETRY CORES",
                 style: TextStyle(color: gold24k, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               
               Expanded(
                 child: ListView(
-                  physics: BouncingScrollPhysics(),
+                  physics: const BouncingScrollPhysics(),
                   children: [
                     buildOptimizationRow("Kernel Engine", "Google BBR Traffic Control Engaged", isEngineActive),
                     buildOptimizationRow("DNS Pipeline", "Cloudflare Anycast Routing Bypass Active", isEngineActive),
@@ -229,15 +249,15 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
               
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Color(0xFF0A0A0F),
+                  color: const Color(0xFF0A0A0F),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.between,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
+                    const Text(
                       "TUNNEL ROUTE LATENCY SPEED:",
                       style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w500),
                     ),
@@ -257,8 +277,8 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
 
   Widget buildOptimizationRow(String coreTitle, String coreDetail, bool active) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: steelGray.withOpacity(0.4),
         borderRadius: BorderRadius.circular(8),
@@ -271,19 +291,19 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
             color: active ? gold24k : Colors.white12,
             size: 20,
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   coreTitle,
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
                   coreDetail,
-                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ],
             ),
@@ -292,4 +312,20 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
       ),
     );
   }
+}
+
+@pragma('vm:entry-point')
+void startCallback() {
+  FlutterForegroundTask.setTaskHandler(MyTaskHandler());
+}
+
+class MyTaskHandler extends TaskHandler {
+  @override
+  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
+
+  @override
+  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
+
+  @override
+  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {}
 }
