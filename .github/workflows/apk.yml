@@ -19,7 +19,6 @@ jobs:
           rm -rf android ios web windows macos linux lib test pubspec.yaml
           flutter create --project-name bronze_prestige_gate --platforms=android .
           
-          # Pin flutter_foreground_task version
           flutter pub add http url_launcher flutter_foreground_task:8.14.0
 
           # Inject Native Android Background Service Permissions
@@ -68,6 +67,7 @@ jobs:
                 ),
                 iosNotificationOptions: const IOSNotificationOptions(showNotification: true, playSound: false),
                 foregroundTaskOptions: const ForegroundTaskOptions(
+                  eventAction: ForegroundTaskEventAction.repeat(),
                   autoRunOnBoot: true,
                   allowWakeLock: true,
                   allowWifiLock: true,
@@ -159,9 +159,9 @@ jobs:
           void startCallback() { FlutterForegroundTask.setTaskHandler(MyTaskHandler()); }
 
           class MyTaskHandler extends TaskHandler {
-            @override Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
-            @override Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
-            @override Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {}
+            @override Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
+            @override void onRepeatEvent(DateTime timestamp) {}
+            @override Future<void> onDestroy(DateTime timestamp) async {}
           }
           DART
 
