@@ -19,7 +19,7 @@ jobs:
           rm -rf android ios web windows macos linux lib test pubspec.yaml
           flutter create --project-name bronze_prestige_gate --platforms=android .
           
-          # FIX: Changed version from 8.15.0 to 8.14.0 which actually exists on pub.dev!
+          # Pin flutter_foreground_task version
           flutter pub add http url_launcher flutter_foreground_task:8.14.0
 
           # Inject Native Android Background Service Permissions
@@ -68,7 +68,6 @@ jobs:
                 ),
                 iosNotificationOptions: const IOSNotificationOptions(showNotification: true, playSound: false),
                 foregroundTaskOptions: const ForegroundTaskOptions(
-                  isOnceEvent: false,
                   autoRunOnBoot: true,
                   allowWakeLock: true,
                   allowWifiLock: true,
