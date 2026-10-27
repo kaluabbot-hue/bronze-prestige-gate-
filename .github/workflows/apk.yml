@@ -31,7 +31,6 @@ jobs:
           echo "android.enableJetifier=true" >> android/gradle.properties
           sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.22'/" android/build.gradle || true
           sed -i 's/.*kotlin.android.*/    id "org.jetbrains.kotlin.android" version "1.9.22" apply false/' android/settings.gradle || true
-          echo "subprojects { afterEvaluate { tasks.matching { it.name.contains('verifyReleaseResources') }.configureEach { enabled = false } } }" >> android/build.gradle
       - name: App
         run: |
           cat > lib/dashboard.dart << 'DART'
