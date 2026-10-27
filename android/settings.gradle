@@ -10,7 +10,7 @@ pluginManagement {
             sdkPath = System.getenv("FLUTTER_ROOT")
         }
         if (sdkPath == null) {
-            throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in local.properties or with FLUTTER_ROOT in the environment.")
+            throw new GradleException("Flutter SDK not found.")
         }
         return sdkPath
     }()
@@ -26,8 +26,8 @@ pluginManagement {
 
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-    id "com.android.application" version "8.1.0" apply false
-    id "org.jetbrains.kotlin.android" version "1.8.22" apply false
+    id "com.android.application" version "8.3.2" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.24" apply false
 }
 
 include ":app"
