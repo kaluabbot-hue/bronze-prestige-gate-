@@ -67,7 +67,7 @@ jobs:
                 ),
                 iosNotificationOptions: const IOSNotificationOptions(showNotification: true, playSound: false),
                 foregroundTaskOptions: const ForegroundTaskOptions(
-                  eventAction: ForegroundTaskEventAction.repeat(),
+                  eventAction: ForegroundTaskEventAction.repeat(5000),
                   autoRunOnBoot: true,
                   allowWakeLock: true,
                   allowWifiLock: true,
@@ -265,10 +265,7 @@ jobs:
 
             @override
             Widget build(BuildContext context) {
-              final Color basaltBlack = Color(0xFF0D0E12);
-              final Color industrialBronze = Color(0xFFCD7F32);
-              final Color darkCardBackground = Color(0xFF161922);
-
+              final Color basaltBlack = Color(0xFF0D0E12); final Color industrialBronze = Color(0xFFCD7F32); final Color darkCardBackground = Color(0xFF161922);
               return Scaffold(
                 backgroundColor: basaltBlack,
                 body: SafeArea(
@@ -356,7 +353,7 @@ jobs:
       - name: Build Android APK
         run: |
           flutter pub get
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons --verbose
 
       - name: Automatic Error Debugger Shield
         if: failure()
