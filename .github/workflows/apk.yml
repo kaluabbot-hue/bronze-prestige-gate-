@@ -16,7 +16,8 @@ jobs:
           channel: 'stable'
           flutter-version: '3.22.3'
       - run: rm -rf android
-      - run: flutter create --platforms=android .
+      - run: sed -i 's/bronze-prestige-gate/bronze_prestige_gate/g' pubspec.yaml || true
+      - run: flutter create --project-name bronze_prestige_gate --platforms=android .
       - run: flutter pub get
       - run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
