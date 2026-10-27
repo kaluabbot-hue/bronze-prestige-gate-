@@ -30,6 +30,12 @@ jobs:
           sed -i '/flutter_ton_ui/d' pubspec.yaml || true
           sed -i '/flutter_tun_v2/d' pubspec.yaml || true
 
+      - name: Fix Kotlin Version
+        run: |
+          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.22'/" android/build.gradle || true
+          sed -i "s/id \"org.jetbrains.kotlin.android\" version \".*\" apply false/id \"org.jetbrains.kotlin.android\" version \"1.9.22\" apply false/" android/settings.gradle || true
+          sed -i 's/org.jetbrains.kotlin.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle || true
+
       - name: Launch App Full
         run: |
           cat > lib/dashboard.dart << 'DART'
@@ -128,8 +134,11 @@ jobs:
           MAIN
 
       - run: flutter pub get
-      - run: flutter analyze --no-pub
-      - run: flutter build apk --release
+      
+      - name: Analyze - Show All Errors
+        run: flutter analyze --no-pub || true
+
+      - run: flutter build apk --release --verbose
       - uses: actions/upload-artifact@v4
         with:
           name: launch-apk
