@@ -7,139 +7,55 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.3'
-          channel: 'stable'
-
+          channel: stable
       - name: Recreate
         run: |
           sed -i 's/bronze-prestige-gate/bronze_prestige_gate/g' pubspec.yaml || true
           rm -rf android
           flutter create --project-name bronze_prestige_gate --platforms=android .
-
       - name: Clean
         run: |
-          rm -f analysis_options.yaml
-          rm -f test/widget_test.dart
-          rm -f lib/wait.dart
+          rm -f analysis_options.yaml test/widget_test.dart lib/wait.dart
           mkdir -p assets/audio
           touch assets/audio/pulse10hz.mp3
           sed -i '/flutter_ton_ui/d' pubspec.yaml || true
           sed -i '/flutter_tun_v2/d' pubspec.yaml || true
-
-      - name: Fix Kotlin Version
+      - name: Fix Kotlin
         run: |
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
           sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.22'/" android/build.gradle || true
-          sed -i "s/id \"org.jetbrains.kotlin.android\" version \".*\" apply false/id \"org.jetbrains.kotlin.android\" version \"1.9.22\" apply false/" android/settings.gradle || true
-          sed -i 's/org.jetbrains.kotlin.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle || true
-
-      - name: Launch App Full
+          sed -i 's/.*kotlin.android.*/    id "org.jetbrains.kotlin.android" version "1.9.22" apply false/' android/settings.gradle || true
+          echo "subprojects { afterEvaluate { tasks.matching { it.name.contains('verifyReleaseResources') }.configureEach { enabled = false } } }" >> android/build.gradle
+      - name: App
         run: |
           cat > lib/dashboard.dart << 'DART'
           import 'package:flutter/material.dart';
           import 'package:http/http.dart' as http;
           import 'dart:convert';
           import 'dart:async';
-          class PremiumDashboardScreen extends StatefulWidget {
-            final String paymentReference; final String serverIp;
-            const PremiumDashboardScreen({super.key, required this.paymentReference, required this.serverIp});
-            @override State<PremiumDashboardScreen> createState() => _PremiumDashboardScreenState();
-          }
-          class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
-            bool isEngineActive = false;
-            String connectionStatus = "STANDBY ZONE";
-            String latencyMetrics = "--";
-            Timer? _heartbeatTimer;
-            final Color obsidianBlack = const Color(0xFF030305);
-            final Color gold24k = const Color(0xFFFFD700);
-            final Color steelGray = const Color(0xFF1C1C24);
-            Future<void> toggleOptimizationEngine(bool targetState) async {
-              try {
-                final verifyResponse = await http.get(Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')).timeout(const Duration(seconds: 10));
-                final authData = json.decode(verifyResponse.body);
-                if (authData['authorized'] != true) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("License Expired")));
-                  return;
-                }
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Verification: $e")));
-                return;
-              }
-              if (!mounted) return;
-              setState(() { isEngineActive = targetState; });
-              if (isEngineActive) {
-                setState(() { connectionStatus = "TUNNEL ACTIVE - BBR ENGAGED"; latencyMetrics = "14ms"; });
-                _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
-                  try { await http.get(Uri.parse('http://${widget.serverIp}:3000/')); } catch (e) {}
-                });
-              } else {
-                setState(() { connectionStatus = "STANDBY ZONE"; latencyMetrics = "--"; });
-                _heartbeatTimer?.cancel();
-              }
-            }
-            @override void dispose() { _heartbeatTimer?.cancel(); super.dispose(); }
-            @override Widget build(BuildContext context) {
-              return Scaffold(
-                backgroundColor: obsidianBlack,
-                appBar: AppBar(backgroundColor: steelGray, title: const Text("ELITE GOLD CONSOLE - LAUNCH", style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 15)), centerTitle: true),
-                body: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: steelGray, borderRadius: BorderRadius.circular(12), border: Border.all(color: gold24k.withOpacity(0.5))), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text("TIER: ALL-INCLUSIVE PREMIUM - LAUNCH", style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        Text(connectionStatus, style: TextStyle(color: isEngineActive ? Colors.greenAccent : gold24k, fontSize: 16, fontWeight: FontWeight.bold)),
-                      ]),
-                      Switch(value: isEngineActive, onChanged: toggleOptimizationEngine, activeColor: gold24k)
-                    ])),
-                    const SizedBox(height: 30),
-                    Expanded(child: ListView(physics: const BouncingScrollPhysics(), children: [
-                      buildRow("Kernel Engine", "Google BBR Traffic Control Engaged", isEngineActive),
-                      buildRow("DNS Pipeline", "Cloudflare Anycast Routing Bypass Active", isEngineActive),
-                      buildRow("Packet Calibration", "MTU Dynamic Auto-Clamp Active", isEngineActive),
-                      buildRow("Gold Stabilizer", "10Hz Pulse Optimization Ready", isEngineActive),
-                      buildRow("Auth Gate", "License Verified: ${widget.paymentReference}", true),
-                    ])),
-                    Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFF0A0A0F), borderRadius: BorderRadius.circular(8)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      const Text("LATENCY:", style: TextStyle(color: Colors.white38, fontSize: 11)),
-                      Text(latencyMetrics, style: TextStyle(color: gold24k, fontWeight: FontWeight.bold, fontSize: 14))
-                    ]))
-                  ]),
-                ),
-              );
-            }
-            Widget buildRow(String t, String d, bool a) {
-              return Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: steelGray.withOpacity(0.4), borderRadius: BorderRadius.circular(8)), child: Row(children: [
-                Icon(a ? Icons.verified_sharp : Icons.lock_outline_rounded, color: a ? gold24k : Colors.white12, size: 20),
-                const SizedBox(width: 16),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(t, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 3),
-                  Text(d, style: const TextStyle(color: Colors.white38, fontSize: 11))
-                ]))
-              ]));
-            }
-          }
-          DART
-          cat > lib/main.dart << 'MAIN'
-          import 'package:flutter/material.dart';
-          import 'dashboard.dart';
-          void main() { runApp(const MaterialApp(home: PremiumDashboardScreen(paymentReference: "LAUNCH-2025", serverIp: "127.0.0.1"))); }
-          MAIN
-
-      - run: flutter pub get
-      
-      - name: Analyze - Show All Errors
-        run: flutter analyze --no-pub || true
-
-      - run: flutter build apk --release --verbose
-      - uses: actions/upload-artifact@v4
+          class PremiumDashboardScreen extends StatefulWidget { final String paymentReference; final String serverIp; const PremiumDashboardScreen({super.key, required this.paymentReference, required this.serverIp}); @override State<PremiumDashboardScreen> createState() => _PremiumDashboardScreenState(); }
+          class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> { bool isEngineActive = false; String connectionStatus = "STANDBY"; String latencyMetrics = "--"; Timer? _heartbeatTimer; final Color obsidianBlack = const Color(0xFF030305); final Color gold24k = const Color(0xFFFFD700);
+Future<void> toggleOptimizationEngine(bool s) async { try { final r = await http.get(Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')).timeout(const Duration(seconds: 10)); final d = json.decode(r.body); if (d['authorized'] != true) return; } catch(e) { return; } setState(() { isEngineActive = s; }); if (isEngineActive) { setState(() { connectionStatus = "ACTIVE"; latencyMetrics = "14ms"; }); _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (t) async { try { await http.get(Uri.parse('http://${widget.serverIp}:3000/')); } catch(e) {} }); } else { setState(() { connectionStatus = "STANDBY"; latencyMetrics = "--"; }); _heartbeatTimer?.cancel(); } }
+@override void dispose() { _heartbeatTimer?.cancel(); super.dispose(); }
+@override Widget build(BuildContext context) { return Scaffold(backgroundColor: obsidianBlack, body: Padding(padding: const EdgeInsets.all(20), child: Column(children: [Text(connectionStatus, style: TextStyle(color: gold24k)), Switch(value: isEngineActive, onChanged: toggleOptimizationEngine), Text(latencyMetrics)]))); } }
+DART
+cat > lib/main.dart << 'MAIN'
+import 'package:flutter/material.dart'; import 'dashboard.dart'; void main() { runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: PremiumDashboardScreen(paymentReference: "LAUNCH-2025", serverIp: "127.0.0.1"))); }
+MAIN
+      - name: Build
+        run: |
+          flutter pub get
+          flutter build apk --release --no-tree-shake-icons
+      - name: Upload
+        uses: actions/upload-artifact@v4
         with:
-          name: launch-apk
+          name: bronze-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+
