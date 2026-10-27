@@ -13,26 +13,13 @@ jobs:
         with:
           flutter-version: '3.22.3'
           channel: stable
-      - name: Recreate
+
+      - name: Build Clean Project From Scratch
         run: |
-          sed -i 's/bronze-prestige-gate/bronze_prestige_gate/g' pubspec.yaml || true
-          rm -rf android
+          rm -rf android ios web windows macos linux lib test pubspec.yaml
           flutter create --project-name bronze_prestige_gate --platforms=android .
-      - name: Clean
-        run: |
-          rm -f analysis_options.yaml test/widget_test.dart lib/wait.dart
-          mkdir -p assets/audio
-          touch assets/audio/pulse10hz.mp3
-          sed -i '/flutter_ton_ui/d' pubspec.yaml || true
-          sed -i '/flutter_tun_v2/d' pubspec.yaml || true
-      - name: Fix Kotlin
-        run: |
-          echo "android.useAndroidX=true" >> android/gradle.properties
-          echo "android.enableJetifier=true" >> android/gradle.properties
-          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.22'/" android/build.gradle || true
-          sed -i 's/.*kotlin.android.*/    id "org.jetbrains.kotlin.android" version "1.9.22" apply false/' android/settings.gradle || true
-      - name: App
-        run: |
+          flutter pub add http
+
           cat > lib/dashboard.dart << 'DART'
           import 'package:flutter/material.dart';
           import 'package:http/http.dart' as http;
@@ -120,11 +107,29 @@ jobs:
             ));
           }
           MAIN
-      - name: Build
+
+      - name: Build Android APK
         run: |
           flutter pub get
-          flutter build apk --release --no-tree-shake-icons
-      - name: Upload
+          # Added deep stacktrace flags to force Gradle to output hidden errors instantly
+          flutter build apk --release --no-tree-shake-icons --verbose --stacktrace
+
+      - name: Automatic Error Debugger Shield
+        if: failure()
+        run: |
+          echo "========================================================"
+          echo "⚠️ BUILD FAILED! SCANNING AND SPITTING OUT ALL SYSTEM ERRORS NOW ⚠️"
+          echo "========================================================"
+          echo "--- Android App Build Gradle Content ---"
+          cat android/app/build.gradle || true
+          echo "--- Root Project Build Gradle Content ---"
+          cat android/build.gradle || true
+          echo "--- Global Environment Diagnostics ---"
+          flutter doctor -v || true
+          echo "========================================================"
+
+      - name: Upload Finished Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: bronze-apk
