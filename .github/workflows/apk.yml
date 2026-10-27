@@ -39,15 +39,88 @@ jobs:
           import 'package:http/http.dart' as http;
           import 'dart:convert';
           import 'dart:async';
-          class PremiumDashboardScreen extends StatefulWidget { final String paymentReference; final String serverIp; const PremiumDashboardScreen({super.key, required this.paymentReference, required this.serverIp}); @override State<PremiumDashboardScreen> createState() => _PremiumDashboardScreenState(); }
-          class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> { bool isEngineActive = false; String connectionStatus = "STANDBY"; String latencyMetrics = "--"; Timer? _heartbeatTimer; final Color obsidianBlack = const Color(0xFF030305); final Color gold24k = const Color(0xFFFFD700);
-Future<void> toggleOptimizationEngine(bool s) async { try { final r = await http.get(Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')).timeout(const Duration(seconds: 10)); final d = json.decode(r.body); if (d['authorized'] != true) return; } catch(e) { return; } setState(() { isEngineActive = s; }); if (isEngineActive) { setState(() { connectionStatus = "ACTIVE"; latencyMetrics = "14ms"; }); _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (t) async { try { await http.get(Uri.parse('http://${widget.serverIp}:3000/')); } catch(e) {} }); } else { setState(() { connectionStatus = "STANDBY"; latencyMetrics = "--"; }); _heartbeatTimer?.cancel(); } }
-@override void dispose() { _heartbeatTimer?.cancel(); super.dispose(); }
-@override Widget build(BuildContext context) { return Scaffold(backgroundColor: obsidianBlack, body: Padding(padding: const EdgeInsets.all(20), child: Column(children: [Text(connectionStatus, style: TextStyle(color: gold24k)), Switch(value: isEngineActive, onChanged: toggleOptimizationEngine), Text(latencyMetrics)]))); } }
-DART
-cat > lib/main.dart << 'MAIN'
-import 'package:flutter/material.dart'; import 'dashboard.dart'; void main() { runApp(const MaterialApp(debugShowCheckedModeBanner: false, home: PremiumDashboardScreen(paymentReference: "LAUNCH-2025", serverIp: "127.0.0.1"))); }
-MAIN
+
+          class PremiumDashboardScreen extends StatefulWidget {
+            final String paymentReference;
+            final String serverIp;
+            const PremiumDashboardScreen({super.key, required this.paymentReference, required this.serverIp});
+            @override
+            State<PremiumDashboardScreen> createState() => _PremiumDashboardScreenState();
+          }
+
+          class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
+            bool isEngineActive = false;
+            String connectionStatus = "STANDBY";
+            String latencyMetrics = "--";
+            Timer? _heartbeatTimer;
+            final Color obsidianBlack = const Color(0xFF030305);
+            final Color gold24k = const Color(0xFFFFD700);
+
+            Future<void> toggleOptimizationEngine(bool s) async {
+              try {
+                final r = await http.get(Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')).timeout(const Duration(seconds: 10));
+                final d = json.decode(r.body);
+                if (d['authorized'] != true) return;
+              } catch(e) {
+                return;
+              }
+              setState(() {
+                isEngineActive = s;
+              });
+              if (isEngineActive) {
+                setState(() {
+                  connectionStatus = "ACTIVE";
+                  latencyMetrics = "14ms";
+                });
+                _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (t) async {
+                  try {
+                    await http.get(Uri.parse('http://${widget.serverIp}:3000/'));
+                  } catch(e) {}
+                });
+              } else {
+                setState(() {
+                  connectionStatus = "STANDBY";
+                  latencyMetrics = "--";
+                });
+                _heartbeatTimer?.cancel();
+              }
+            }
+
+            @override
+            void dispose() {
+              _heartbeatTimer?.cancel();
+              super.dispose();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                backgroundColor: obsidianBlack,
+                body: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Text(connectionStatus, style: TextStyle(color: gold24k)),
+                      Switch(value: isEngineActive, onChanged: toggleOptimizationEngine),
+                      Text(latencyMetrics)
+                    ]
+                  )
+                )
+              );
+            }
+          }
+          DART
+
+          cat > lib/main.dart << 'MAIN'
+          import 'package:flutter/material.dart';
+          import 'dashboard.dart';
+          void main() {
+            runApp(const MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: PremiumDashboardScreen(paymentReference: "LAUNCH-2025", serverIp: "127.0.0.1")
+            ));
+          }
+          MAIN
       - name: Build
         run: |
           flutter pub get
@@ -57,5 +130,3 @@ MAIN
         with:
           name: bronze-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-
-
