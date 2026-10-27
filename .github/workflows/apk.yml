@@ -349,11 +349,10 @@ jobs:
             }
           }
           MAIN
-
       - name: Build Android APK
         run: |
           flutter pub get
-          flutter build apk --release --no-tree-shake-icons --verbose
+          flutter build apk --release --no-tree-shake-icons --verbose -- --stacktrace --info
 
       - name: Automatic Error Debugger Shield
         if: failure()
