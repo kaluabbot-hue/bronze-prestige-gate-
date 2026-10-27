@@ -19,8 +19,8 @@ jobs:
           rm -rf android ios web windows macos linux lib test pubspec.yaml
           flutter create --project-name bronze_prestige_gate --platforms=android .
           
-          # FIX 1: Pin flutter_foreground_task version to avoid breaking API changes
-          flutter pub add http url_launcher flutter_foreground_task:8.15.0
+          # FIX: Changed version from 8.15.0 to 8.14.0 which actually exists on pub.dev!
+          flutter pub add http url_launcher flutter_foreground_task:8.14.0
 
           # Inject Native Android Background Service Permissions
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' android/app/src/main/AndroidManifest.xml
@@ -343,7 +343,6 @@ jobs:
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
-                  # FIX 2: Correct layout type setting here to bypass 'between' compilation crash
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(label, style: TextStyle(color: Colors.white54, fontSize: 12)),
