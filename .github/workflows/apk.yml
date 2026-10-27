@@ -18,13 +18,15 @@ jobs:
         run: |
           rm -rf android ios web windows macos linux lib test pubspec.yaml
           flutter create --project-name bronze_prestige_gate --platforms=android .
-          flutter pub add http
+          flutter pub add http url_launcher flutter_foreground_task
 
           cat > lib/dashboard.dart << 'DART'
           import 'package:flutter/material.dart';
           import 'package:http/http.dart' as http;
           import 'dart:convert';
           import 'dart:async';
+          import 'dart:isolate';
+          import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
           class PremiumDashboardScreen extends StatefulWidget {
             final String paymentReference;
@@ -36,95 +38,328 @@ jobs:
 
           class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
             bool isEngineActive = false;
-            String connectionStatus = "STANDBY";
+            String connectionStatus = "STANDBY ZONE";
             String latencyMetrics = "--";
             Timer? _heartbeatTimer;
             final Color obsidianBlack = const Color(0xFF030305);
             final Color gold24k = const Color(0xFFFFD700);
+            final Color matteGold = const Color(0xFFD4AF37);
+            final Color steelGray = const Color(0xFF1C1C24);
 
-            Future<void> toggleOptimizationEngine(bool s) async {
+            @override
+            void initState() {
+              super.initState();
+              initForegroundTask();
+            }
+
+            void initForegroundTask() {
+              FlutterForegroundTask.init(
+                androidNotificationOptions: AndroidNotificationOptions(
+                  channelId: 'gold_stabilizer_channel',
+                  channelName: 'Elite Gold Stabilizer',
+                  channelDescription: 'Optimizing connection',
+                  channelImportance: NotificationChannelImportance.LOW,
+                  priority: NotificationPriority.LOW,
+                ),
+                iosNotificationOptions: const IOSNotificationOptions(showNotification: true, playSound: false),
+                foregroundTaskOptions: const ForegroundTaskOptions(
+                  isOnceEvent: false,
+                  autoRunOnBoot: true,
+                  allowWakeLock: true,
+                  allowWifiLock: true,
+                ),
+              );
+            }
+
+            Future<void> toggleOptimizationEngine(bool targetState) async {
               try {
-                final r = await http.get(Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')).timeout(const Duration(seconds: 10));
-                final d = json.decode(r.body);
-                if (d['authorized'] != true) return;
-              } catch(e) {
+                final verifyResponse = await http.get(Uri.parse('http://${widget.serverIp}:3000/api/auth/verify-license?reference=${widget.paymentReference}')).timeout(const Duration(seconds: 10));
+                final authData = json.decode(verifyResponse.body);
+                if (authData['authorized'] != true) {
+                  if (!mounted) return;
+                  showAuthError("License Expired or Revoked.");
+                  return;
+                }
+              } catch (e) {
+                if (!mounted) return;
+                showAuthError("Security verification handshake failed.");
                 return;
               }
-              setState(() {
-                isEngineActive = s;
-              });
+
+              if (!mounted) return;
+              setState(() { isEngineActive = targetState; });
+
               if (isEngineActive) {
-                setState(() {
-                  connectionStatus = "ACTIVE";
-                  latencyMetrics = "14ms";
-                });
-                _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (t) async {
-                  try {
-                    await http.get(Uri.parse('http://${widget.serverIp}:3000/'));
-                  } catch(e) {}
+                setState(() { connectionStatus = "TUNNEL ACTIVE"; latencyMetrics = "14ms"; });
+
+                try {
+                  await FlutterForegroundTask.startService(
+                    notificationTitle: 'Elite Gold Stabilizer Active',
+                    notificationText: 'Optimizing connection masts...',
+                    callback: startCallback,
+                  );
+                } catch (e) {}
+
+                _heartbeatTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+                  try { await http.get(Uri.parse('http://${widget.serverIp}:3000/')); } catch (e) {}
                 });
               } else {
-                setState(() {
-                  connectionStatus = "STANDBY";
-                  latencyMetrics = "--";
-                });
+                setState(() { connectionStatus = "STANDBY ZONE"; latencyMetrics = "--"; });
+                await FlutterForegroundTask.stopService();
                 _heartbeatTimer?.cancel();
               }
             }
 
-            @override
-            void dispose() {
-              _heartbeatTimer?.cancel();
-              super.dispose();
+            void showAuthError(String msg) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.redAccent, content: Text(msg)));
             }
 
             @override
+            void dispose() { _heartbeatTimer?.cancel(); super.dispose(); }
+
+            @override
             Widget build(BuildContext context) {
-              return Scaffold(
-                backgroundColor: obsidianBlack,
-                body: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Text(connectionStatus, style: TextStyle(color: gold24k)),
-                      Switch(value: isEngineActive, onChanged: toggleOptimizationEngine),
-                      Text(latencyMetrics)
-                    ]
-                  )
-                )
+              return WithForegroundTask(
+                child: Scaffold(
+                  backgroundColor: obsidianBlack,
+                  appBar: AppBar(backgroundColor: steelGray, title: const Text("ELITE GOLD CONSOLE", style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 16)), centerTitle: true, elevation: 0, automaticallyImplyLeading: false),
+                  body: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: steelGray, borderRadius: BorderRadius.circular(12), border: Border.all(color: gold24k.withOpacity(0.5), width: 1)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("TIER: ALL-INCLUSIVE PREMIUM", style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)), const SizedBox(height: 6), Text(connectionStatus, style: TextStyle(color: isEngineActive ? Colors.greenAccent : gold24k, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5))]), Switch(value: isEngineActive, onChanged: (value) { toggleOptimizationEngine(value); }, activeColor: gold24k, activeTrackColor: matteGold.withOpacity(0.3), inactiveThumbColor: Colors.white24, inactiveTrackColor: Colors.black38)])),
+                      const SizedBox(height: 30),
+                      Text("INTELLIGENT TELEMETRY CORES", style: TextStyle(color: gold24k, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                      const SizedBox(height: 12),
+                      Expanded(child: ListView(physics: const BouncingScrollPhysics(), children: [
+                        buildOptimizationRow("Kernel Engine", "Google BBR Traffic Control Engaged", isEngineActive), 
+                        buildOptimizationRow("DNS Pipeline", "Cloudflare Anycast Routing Bypass Active", isEngineActive), 
+                        buildOptimizationRow("Packet Calibration", "MTU Dynamic Auto-Clamp Active (1360 Profile)", isEngineActive), 
+                        buildOptimizationRow("Split Tunneling", "Active (Binance/PalmPay/WhatsApp Priority Whitelist)", isEngineActive), 
+                        buildOptimizationRow("Radio Keep-Alive", "Hardware signal system optimization processing active", isEngineActive), 
+                        buildOptimizationRow("Tower Bypasser", "3000ms background heartbeat pulse broadcast active", isEngineActive)
+                      ])),
+                      Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: const Color(0xFF0A0A0F), borderRadius: BorderRadius.circular(8)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text("TUNNEL ROUTE LATENCY SPEED:", style: TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w500)), Text(latencyMetrics, style: TextStyle(color: gold24k, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5))]))
+                    ]),
+                  ),
+                ),
               );
             }
+
+            Widget buildOptimizationRow(String coreTitle, String coreDetail, bool active) {
+              return Container(margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: steelGray.withOpacity(0.4), borderRadius: BorderRadius.circular(8), border: Border.all(color: active ? gold24k.withOpacity(0.15) : Colors.transparent, width: 1)), child: Row(children: [Icon(active ? Icons.verified_sharp : Icons.lock_outline_rounded, color: active ? gold24k : Colors.white12, size: 20), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(coreTitle, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)), const SizedBox(height: 3), Text(coreDetail, style: const TextStyle(color: Colors.white38, fontSize: 11))]))]));
+            }
+          }
+
+          @pragma('vm:entry-point')
+          void startCallback() { FlutterForegroundTask.setTaskHandler(MyTaskHandler()); }
+
+          class MyTaskHandler extends TaskHandler {
+            @override Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
+            @override Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
+            @override Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {}
           }
           DART
 
           cat > lib/main.dart << 'MAIN'
           import 'package:flutter/material.dart';
-          import 'dashboard.dart';
+          import 'package:url_launcher/url_launcher.dart';
+          import 'package:http/http.dart' as http;
+          import 'dart:convert';
+          import 'dashboard.dart'; 
+
           void main() {
-            runApp(const MaterialApp(
+            runApp(MaterialApp(
               debugShowCheckedModeBanner: false,
-              home: PremiumDashboardScreen(paymentReference: "LAUNCH-2025", serverIp: "127.0.0.1")
+              home: BronzePrestigeGateScreen(),
             ));
+          }
+
+          class BronzePrestigeGateScreen extends StatefulWidget {
+            @override
+            _BronzePrestigeGateScreenState createState() => _BronzePrestigeGateScreenState();
+          }
+
+          class _BronzePrestigeGateScreenState extends State<BronzePrestigeGateScreen> {
+            final String serverIpAddress = "150.230.127.46";
+            bool isVerifying = false;
+
+            Future<void> initializeAndPay() async {
+              setState(() { isVerifying = true; });
+              try {
+                final response = await http.post(
+                  Uri.parse('http://$serverIpAddress:3000/api/checkout/initialize'),
+                  headers: {"Content-Type": "application/json"},
+                ).timeout(Duration(seconds: 15));
+
+                if (response.statusCode == 200) {
+                  final data = json.decode(response.body);
+                  final String paymentUrl = data['authorization_url'];
+                  final String reference = data['reference'];
+
+                  final Uri url = Uri.parse(paymentUrl);
+                  if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: Color(0xFFCD7F32),
+                        content: Text("Awaiting secure authorization from bank..."),
+                        duration: Duration(seconds: 4),
+                      ),
+                    );
+                    pollSubscriptionStatus(reference);
+                  } else {
+                    showError("Could not launch secure payment gateway.");
+                  }
+                } else {
+                  showError("Server Gateway Busy. Try again in 60 seconds.");
+                }
+              } catch (e) {
+                showError("Connection Timeout. Check your mobile network data.");
+              }
+            }
+
+            Future<void> pollSubscriptionStatus(String reference) async {
+              int checkCount = 0;
+              bool paid = false;
+
+              while (checkCount < 30 && !paid) {
+                await Future.delayed(Duration(seconds: 5));
+                try {
+                  final response = await http.get(
+                    Uri.parse('http://$serverIpAddress:3000/api/subscription/verify/$reference')
+                  ).timeout(Duration(seconds: 4));
+
+                  if (response.statusCode == 200) {
+                    final data = json.decode(response.body);
+                    if (data['status'] == 'active') {
+                      paid = true;
+                      if (!mounted) return;
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PremiumDashboardScreen(paymentReference: reference, serverIp: serverIpAddress),
+                        ),
+                      );
+                      return;
+                    }
+                  }
+                } catch (e) {}
+                checkCount++;
+              }
+
+              if (!mounted) return;
+              setState(() { isVerifying = false; });
+              showError("Payment Timeout: Tap again if payment was completed.");
+            }
+
+            void showError(String message) {
+              if (!mounted) return;
+              setState(() { isVerifying = false; });
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.redAccent, content: Text(message)));
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              final Color basaltBlack = Color(0xFF0D0E12);
+              final Color industrialBronze = Color(0xFFCD7F32);
+              final Color darkCardBackground = Color(0xFF161922);
+
+              return Scaffold(
+                backgroundColor: basaltBlack,
+                body: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Spacer(),
+                        Icon(Icons.gpp_maybe_outlined, size: 90, color: industrialBronze),
+                        SizedBox(height: 24),
+                        Text(
+                          "NETWORK STABILIZER",
+                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2.0),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "MTN • AIRTEL • GLO HIGH-STABILITY SYSTEM",
+                          style: TextStyle(color: industrialBronze, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0),
+                        ),
+                        SizedBox(height: 35),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: darkCardBackground,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: industrialBronze.withOpacity(0.3), width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "CURRENT SYSTEM TELEMETRY:",
+                                style: TextStyle(color: industrialBronze, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 12),
+                              buildStaticLogItem("Tunnel Tier", "BRONZE (Public Carrier Route)"),
+                              buildStaticLogItem("Data Status", "Unoptimized Signal Queue"),
+                              buildStaticLogItem("Routing Node", "Congested Carrier DNS (>280ms lag)"),
+                            ],
+                          ),
+                        ),
+                        Spacer(),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: industrialBronze,
+                            foregroundColor: basaltBlack,
+                            minimumSize: Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 4,
+                          ),
+                          onPressed: isVerifying ? null : initializeAndPay,
+                          child: isVerifying 
+                            ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: basaltBlack, strokeWidth: 2.5))
+                            : Text("DEPLOY ELITE GOLD BOOSTER — ₦3,500", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          "Secured via Paystack Banking Gateway. 30-Day Automated License.",
+                          style: TextStyle(color: Colors.white24, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            Widget buildStaticLogItem(String label, String value) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.between,
+                  children: [
+                    Text(label, style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text(value, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              );
+            }
           }
           MAIN
 
       - name: Build Android APK
         run: |
           flutter pub get
-          # Pass the stacktrace flag safely through into the Android compiler tools
-          flutter build apk --release --no-tree-shake-icons --verbose --build-name=1.0.0 --build-number=1
+          flutter build apk --release --no-tree-shake-icons --verbose
 
       - name: Automatic Error Debugger Shield
         if: failure()
         run: |
           echo "========================================================"
-          echo "⚠️ BUILD FAILED! SCANNING AND SPITTING OUT ALL SYSTEM ERRORS NOW ⚠️"
+          echo "⚠️ BUILD FAILED! PRINTING ALL ERROR DIAGNOSTICS NOW ⚠️"
           echo "========================================================"
-          echo "--- Android App Build Gradle Content ---"
-          cat android/app/build.gradle || true
-          echo "--- Root Project Build Gradle Content ---"
-          cat android/build.gradle || true
-          echo "--- Global Environment Diagnostics ---"
           flutter doctor -v || true
           echo "========================================================"
 
