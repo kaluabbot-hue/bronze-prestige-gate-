@@ -159,7 +159,8 @@ jobs:
           @pragma('vm:entry-point')
           void startCallback() { FlutterForegroundTask.setTaskHandler(MyTaskHandler()); }
 
-                 @override Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
+          class MyTaskHandler extends TaskHandler {
+            @override Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {}
             @override Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {}
             @override Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {}
           }
@@ -374,4 +375,3 @@ jobs:
         with:
           name: bronze-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-     class MyTaskHandler extends TaskHandler {
