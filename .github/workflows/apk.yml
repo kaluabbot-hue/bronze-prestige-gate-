@@ -20,6 +20,9 @@ jobs:
           flutter create --project-name bronze_prestige_gate --platforms=android .
           flutter pub add http url_launcher flutter_foreground_task
 
+          # Inject Native Android Background Service Permissions
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' android/app/src/main/AndroidManifest.xml
+
           cat > lib/dashboard.dart << 'DART'
           import 'package:flutter/material.dart';
           import 'package:http/http.dart' as http;
@@ -352,7 +355,7 @@ jobs:
       - name: Build Android APK
         run: |
           flutter pub get
-          flutter build apk --release --no-tree-shake-icons --verbose
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Automatic Error Debugger Shield
         if: failure()
